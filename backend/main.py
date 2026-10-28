@@ -4,6 +4,7 @@ import ezdxf
 import logging
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from ezdxf import recover
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -59,10 +60,11 @@ def count_types(doc):
     # кол-во сушностей каждого типа
     result = {}
 
-    for entity in doc.modelspace():
-        entity_type = entity_type.dxftype().upper()
-        # прибавляем уели уже есть такой тип
-        result[entity_type] = result.get(entity_type, 0) + 1
+    for layout in doc.layouts:
+        for entity in layout:
+            entity_type = entity.dxftype().upper()
+            # прибавляем уели уже есть такой тип
+            result[entity_type] = result.get(entity_type, 0) + 1
 
     return result
 
@@ -78,9 +80,31 @@ async def upload(file: UploadFile = File(...)):
     data = await file.read()
 
     try:
-        doc = ezdxf.read(io.BytesIO(data))
-    except Exception:
-        raise HTTPException(status_code=400, detail="Не удалось прочитать файл")
+        text_content = data.decode('utf-8')
+        
+        # сохранение файла временно на диск
+        temp_file = "temp_upload.dxf"
+        with open(temp_file, "w", encoding='utf-8') as f:
+            f.write(text_content)
+        
+        
+        doc, auditor = recover.readfile(temp_file)
+        
+        # Проверяем ошибки
+        if auditor.has_errors:
+            logger.debug(f"Найдены ошибки в файле: {len(auditor.errors)}")
+            for error in auditor.errors[:5]:  # Показываем первые 5 ошибок
+                logger.debug(f"  Ошибка: {error}")
+        
+        # Удаляем временный файл
+        import os
+        os.remove(temp_file)
+        
+    except Exception as exc:
+        logger.error(f"Ошибка: {exc}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=400, detail=f"Не удалось прочитать файл: {exc}")
 
     # генерация id файла, все по взрослому ;)
     file_id = uuid.uuid4().hex
@@ -120,42 +144,42 @@ def get_entities(file_id: str, entity_type: str):
     items = []
 
     # проход по сущностям 
-    for entity in doc.modelspace():
-        if entity.dxftype().upper() != entity_type:
-            continue
+    for layout in doc.layouts:
+        for entity in layout:
+            if entity.dxftype().upper() != entity_type:
+                continue
 
-        if entity_type == "CIRCULE":
-
-            item = {
-                "type": "CIRCULE",
-            }
-
-            # Генератор параметров
-            for key, value in entity.dxf.all_existing_dxf_attribs().items():
-                # JSON
-                item[key] = clean(value)
-
-            items.append(item)
-
-        # ДА, НАКОНЕЦ-ТО, ЗААГЛУУУШКИИИ!!!
-        elif entity_type in ("LINE", "TEXT"):
-            items.append(
-                {
-                    "type": entity_type,
-                    "stub": True, # в процессе...
-                    "layer": getattr(entity.dxf, "layer", None),
-                    "note": "СДЕЛАТЬ РЕАЛИЗАЦИЮ ЭТОГО ТИПА",
+            if entity_type == "CIRCLE":
+                item = {
+                    "type": "CIRCLE",
                 }
-            )
 
-        # Заглушка и на остальные 
-        else:
-            items.append(
-                {
-                    "type": entity_type,
-                    "stub": True,
-                }
-            )
+                # Генератор параметров
+                for key, value in entity.dxf.all_existing_dxf_attribs().items():
+                    # JSON
+                    item[key] = clean(value)
+
+                items.append(item)
+
+            # ДА, НАКОНЕЦ-ТО, ЗААГЛУУУШКИИИ!!!
+            elif entity_type in ("LINE", "TEXT"):
+                items.append(
+                    {
+                        "type": entity_type,
+                        "stub": True, # в процессе...
+                        "layer": getattr(entity.dxf, "layer", None),
+                        "note": "СДЕЛАТЬ РЕАЛИЗАЦИЮ ЭТОГО ТИПА",
+                    }
+                )
+
+            # Заглушка и на остальные 
+            else:
+                items.append(
+                    {
+                        "type": entity_type,
+                        "stub": True,
+                    }
+                )
     return {
         "items": items,
     }
