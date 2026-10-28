@@ -1,0 +1,50 @@
+backend/.venv/
+backend/venv/
+.venv/
+venv/
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+*.egg-info/
+dist/
+build/
+
+*.log
+logs/
+
+temp_upload.dxf
+debug_uploaded.dxf
+*.tmp
+
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Front
+frontend/node_modules/
+node_modules/
+
+frontend/dist/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+docker-data/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
