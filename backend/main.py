@@ -1,4 +1,5 @@
 import uuid
+import io
 import ezdxf
 import logging
 
@@ -69,3 +70,24 @@ def count_types(doc):
 Эндпоинты
 """
 
+# загрузка файлов и возврат id файла и список сущностей с их кол-вом
+@app.post("/api/upload")
+async def upload(file: UploadFile = File(...)):
+    # file - загруженный файл
+    
+    data = await file.read()
+
+    try:
+        doc = ezdxf.read(io.BytesIO(data))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Не удалось прочитать файл")
+
+    # генерация id файла, все по взрослому ;)
+    file_id = uuid.uuid4().hex
+
+    files[file_id] = doc
+
+    return {
+        "file_id": file_id,
+        "types": count_types(doc),
+    }
