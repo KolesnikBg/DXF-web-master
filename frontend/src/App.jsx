@@ -62,4 +62,53 @@ export default function App() {
         setMassage("Файл загружен");
     }
 
+    // получение объектов выбранного типа
+    async function loadEntities(type) {
+        setSelectedType(type);
+
+        // отпрвака запроса 
+        const response = await fetch('/api/entities/${fileId}/${type}');
+
+        // ответ
+        const data = await response.json();
+
+        // сохранение списка объектов
+        setItems(data.items || []);
+        
+    }
+
+    // возврат интерфейса
+    return (
+        <div>
+            <h1>DXF-web-master</h1>
+            {/* Форма загрузки файла */}
+            <form onSubmit={upload}>
+                <input type="file" accept=".dxf" onChange={e => setFile(e.target.files[0])} />
+                <button type="submit">Загрузить</button>
+            </form>
+            <p>{massage}</p>
+            {fileId && (
+                <button onClick={loadTypes}>
+                    Получить типы сущностей
+                </button>
+            )}
+            <h2>Типы</h2>
+            <ul>
+                {Object.entries(types).map(([type, count]) => (
+                    <li key={type}>
+                        {type}: {count}{" "}
+                        <button onClick={() => loadEntities(type)}>
+                            Показать
+                        </button>
+                    </li>
+                ))}
+            </ul>
+            {selectedType && (
+                <>
+                <h2>Объекты: {selectedType}</h2>
+                <pre>{JSON.stringify(items, null, 2)}</pre>
+                </>
+            )}
+        </div>
+    );
 }
