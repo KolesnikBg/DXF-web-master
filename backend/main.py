@@ -105,3 +105,57 @@ def get_types(file_id: str):
     return {
         "types": count_types(doc),
     }
+
+# получение объектов выбранного типа
+@app.get("/api/entities/{file_id}/{entity_type}")
+def get_entities(file_id: str, entity_type: str):
+    doc = files.get(file_id)
+
+    if not doc:
+        raise HTTPException(status_code=404, detail="Файл не найден")
+
+    entity_type = entity_type.upper()
+
+    # объекты 
+    items = []
+
+    # проход по сущностям 
+    for entity in doc.modelspace():
+        if entity.dxftype().upper() != entity_type:
+            continue
+
+        if entity_type == "CIRCULE":
+
+            item = {
+                "type": "CIRCULE",
+            }
+
+            # Генератор параметров
+            for key, value in entity.dxf.all_existing_dxf_attribs().items():
+                # JSON
+                item[key] = clean(value)
+
+            items.append(item)
+
+        # ДА, НАКОНЕЦ-ТО, ЗААГЛУУУШКИИИ!!!
+        elif entity_type in ("LINE", "TEXT"):
+            items.append(
+                {
+                    "type": entity_type,
+                    "stub": True, # в процессе...
+                    "layer": getattr(entity.dxf, "layer", None),
+                    "note": "СДЕЛАТЬ РЕАЛИЗАЦИЮ ЭТОГО ТИПА",
+                }
+            )
+
+        # Заглушка и на остальные 
+        else:
+            items.append(
+                {
+                    "type": entity_type,
+                    "stub": True,
+                }
+            )
+    return {
+        "items": items,
+    }
