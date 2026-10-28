@@ -91,3 +91,17 @@ async def upload(file: UploadFile = File(...)):
         "file_id": file_id,
         "types": count_types(doc),
     }
+
+# получение типов сушностей
+@app.get("/api/types/{file_id}")
+def get_types(file_id: str):
+
+    # поиск файла по id
+    doc = files.get(file_id)
+
+    if not doc:
+        raise HTTPException(status_code=404, detail="Файл не найден")
+
+    return {
+        "types": count_types(doc),
+    }
